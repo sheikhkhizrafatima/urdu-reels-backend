@@ -1,0 +1,18 @@
+# ── Render.com config (render.yaml) ──────────────────────────────────────
+# Place this file at the root of your repo alongside server.js
+
+services:
+  - type: web
+    name: urdu-reels-server
+    env: node
+    region: oregon
+    plan: free
+    buildCommand: npm install && npx puppeteer browsers install chrome
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
+    autoDeploy: true
