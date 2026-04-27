@@ -289,6 +289,7 @@ app.post('/generate-image', async (req, res) => {
   }
 });
 
+
 // ══════════════════════════════════════════════════════════════════════════
 // ENDPOINT 2: /generate-audio
 // Body: { romanUrdu, voice? }
@@ -297,46 +298,25 @@ app.post('/generate-image', async (req, res) => {
 app.post('/generate-audio', async (req, res) => {
   const {
     romanUrdu = '',
-    voice = 'ur-PK-AsadNeural'  // Free Microsoft Edge Neural voice (Urdu Pakistan Male)
+    voice = 'ur-PK-AsadNeural'  // Free Microsoft Edge Neural voice
   } = req.body;
 
   if (!romanUrdu) return res.status(400).json({ error: 'romanUrdu is required' });
 
-  const outFile = path.join(TMP, `audio_${uuidv4()}.mp3`);
-
   try {
-    // edge-tts CLI wrapper
-    await new Promise((resolve, reject) => {
-      // edge-tts package exposes a CLI: npx edge-tts
-      const proc = spawn('node', [
-        path.join(__dirname, 'node_modules', 'edge-tts', 'src', 'cli.js'),
-        '--voice', voice,
-        '--text', romanUrdu,
-        '--write-media', outFile,
-      ]);
-
-      let stderr = '';
-      proc.stderr.on('data', d => { stderr += d.toString(); });
-      proc.on('close', code => {
-        if (code === 0) resolve();
-        else reject(new Error(`edge-tts exited ${code}: ${stderr}`));
-      });
-      proc.on('error', reject);
-    });
-
-    const audioBuffer = fs.readFileSync(outFile);
-    cleanup(outFile);
+    const { EdgeTTS } = await import('edge-tts-universal');
+    const tts = new EdgeTTS(romanUrdu, voice);
+    const result = await tts.synthesize();
+    const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
 
     res.set('Content-Type', 'audio/mpeg');
     res.set('Content-Disposition', 'inline; filename="voice.mp3"');
     res.send(audioBuffer);
   } catch (err) {
-    cleanup(outFile);
     console.error('/generate-audio error:', err);
     res.status(500).json({ error: err.message });
   }
 });
-
 // ══════════════════════════════════════════════════════════════════════════
 // ENDPOINT 3: /generate-video
 // Body: { imageBase64, audioBase64 }  (base64 encoded PNG + MP3)
